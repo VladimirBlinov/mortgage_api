@@ -2,22 +2,47 @@ from mortgage.domain.model import Mortgage, MortgageEP
 
 
 def test_mortgage_model_init():
-    mortgage = Mortgage(price_mn=20, initial_payment_mn=2,
+    mortgage = Mortgage(price=20, initial_payment=2,
                         period=30, loan_rate=7.5)
-    assert mortgage.price_mn == 20
-    assert mortgage.initial_payment_mn == 2
+    assert mortgage.price == 20
+    assert mortgage.initial_payment == 2
     assert mortgage.period == 30
     assert mortgage.loan_rate == 7.5
 
 
 def test_mortgage_model_with_early_payment_init():
-    mortgage = MortgageEP(price_mn=20, initial_payment_mn=2,
+    mortgage = MortgageEP(price=20, initial_payment=2,
                           period=30, loan_rate=7.5, first_month=24,
                           frequency_months=1, early_payment_amount=50000)
-    assert mortgage.price_mn == 20
-    assert mortgage.initial_payment_mn == 2
+    assert mortgage.price == 20
+    assert mortgage.initial_payment == 2
     assert mortgage.period == 30
     assert mortgage.loan_rate == 7.5
     assert mortgage.first_month == 24
     assert mortgage.frequency_months == 1
     assert mortgage.early_payment_amount == 50000
+
+
+def test_mortgage_to_dict():
+    data_dict = {'price': 20,
+                 'initial_payment': 2,
+                 'period': 30,
+                 'loan_rate': 7.5,
+                 'month_loan_rate': 0,
+                 'total_loan_amount': 0,
+                 'common_rate': 0,
+                 'monthly_payment': 0,
+                 'residual_loan': 0,
+                 'monthly_percent_part': 0,
+                 'monthly_main_part': 0,
+                 'overpayment': 0,
+                 'avg_percent_part': 0,
+                 'avg_monthly_payment': 0,
+                 'additional_payments': 0,
+                 'total_period': 0,
+                 }
+    mortgage = Mortgage(price=20, initial_payment=2,
+                        period=30, loan_rate=7.5)
+    m_dict = mortgage.to_dict()
+    assert data_dict == m_dict
+    assert data_dict['price'] == m_dict['price']
