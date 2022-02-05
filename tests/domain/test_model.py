@@ -1,3 +1,4 @@
+import pytest
 from mortgage.domain.model import Mortgage, MortgageEP
 
 
@@ -46,3 +47,31 @@ def test_mortgage_to_dict():
     m_dict = mortgage.to_dict()
     assert data_dict == m_dict
     assert data_dict['price'] == m_dict['price']
+
+
+def test_mortgage_from_dict():
+    data_dict = {'price': 20,
+                 'initial_payment': 2,
+                 'period': 30,
+                 'loan_rate': 7.5}
+    m = Mortgage.from_dict(data_dict)
+    assert m.price == 20
+    assert m.to_dict()['price'] == data_dict['price']
+
+
+def test_mortgage_from_dict_less_data():
+    data_dict = {'price': '20',
+                 'initial_payment': 2,
+                 'period': 30}
+    with pytest.raises(TypeError):
+        m = Mortgage.from_dict(data_dict)
+
+
+def test_mortgage_from_dict_wrong_data():
+    data_dict = {'price': '20',
+                 'initial_payment': 2,
+                 'period': 30,
+                 'loan_rate': 7.5}
+    m = Mortgage.from_dict(data_dict)
+    assert m.price == 20
+

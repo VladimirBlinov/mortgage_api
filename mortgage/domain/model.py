@@ -1,6 +1,5 @@
 import dataclasses
 from dataclasses import dataclass
-from abc import ABC, abstractmethod
 
 
 @dataclass
@@ -26,6 +25,20 @@ class BaseMortgage:
     def to_dict(self):
         return dataclasses.asdict(self)
 
+    @classmethod
+    def from_dict(cls, d):
+        if 'price' not in d:
+            raise TypeError
+        if 'initial_payment' not in d:
+            raise TypeError
+        if 'period' not in d:
+            raise TypeError
+        if 'loan_rate' not in d:
+            raise TypeError
+        for k, v in d.items():
+            d[k] = float(v)
+        return cls(**d)
+
 
 @dataclass
 class Mortgage(BaseMortgage):
@@ -40,54 +53,4 @@ class MortgageEP(BaseMortgage):
     frequency_months: int = 0
     early_payment_amount: int = 0
 
-
-class Builder(ABC):
-    """Abstract class of calculator Builder"""
-    @abstractmethod
-    def payment_calendar(self):
-        pass
-
-    @abstractmethod
-    def prepare_data(self):
-        """Make transformation of input parameters"""
-        pass
-
-    @abstractmethod
-    def common_rate(self):
-        """# ОБЩАЯ_СТАВКА = (1 + ЕЖЕМЕСЯЧНАЯ_СТАВКА) ^ СРОК_ИПОТЕКИ_МЕСЯЦЕВ"""
-        pass
-
-    @abstractmethod
-    def monthly_payment(self):
-        """# ЕЖЕМЕСЯЧНЫЙ_ПЛАТЕЖ = СУММА_КРЕДИТА * ЕЖЕМЕСЯЧНАЯ_СТАВКА * ОБЩАЯ_СТАВКА / (ОБЩАЯ_СТАВКА - 1)"""
-        pass
-
-    @abstractmethod
-    def residual_loan(self):
-        """# ОСТАТОК ДОЛГА"""
-        pass
-
-    @abstractmethod
-    def monthly_percent_part(self):
-        """# ПРОЦЕНТНАЯ_ЧАСТЬ = ОСТАТОК_ДОЛГА * ЕЖЕМЕСЯЧНАЯ_СТАВКА"""
-        pass
-
-    @abstractmethod
-    def monthly_main_part(self):
-        """# ОСНОВНАЯ_ЧАСТЬ = ЕЖЕМЕСЯЧНЫЙ_ПЛАТЕЖ - ПРОЦЕНТНАЯ_ЧАСТЬ"""
-        pass
-
-    @abstractmethod
-    def overpayment(self):
-        """# ПЕРЕПЛАТА = ЕЖЕМЕСЯЧНЫЙ_ПЛАТЕЖ * СРОК_ИПОТЕКИ_МЕСЯЦЕВ - СУММА_КРЕДИТА"""
-        pass
-
-    @abstractmethod
-    def calculate_first_month(self):
-        """Calculate attributes after first month"""
-        pass
-
-    @abstractmethod
-    def get_payments_calendar(self):
-        """Calculates payments calendar"""
-        pass
+# todo: override from_dict method for EP
