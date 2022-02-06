@@ -1,10 +1,13 @@
 import dataclasses
 from dataclasses import dataclass
+from typing import ClassVar
 
 
 @dataclass
 class BaseMortgage:
     """Base class with initial data"""
+    MONTH_PER_YEAR: ClassVar[int] = 12
+    MLN_MULTIPLIER: ClassVar[int] = 1000000
     price: float
     initial_payment: float
     period: float

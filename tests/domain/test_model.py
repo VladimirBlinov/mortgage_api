@@ -9,6 +9,8 @@ def test_mortgage_model_init():
     assert mortgage.initial_payment == 2
     assert mortgage.period == 30
     assert mortgage.loan_rate == 7.5
+    assert mortgage.MONTH_PER_YEAR == 12
+    assert mortgage.MLN_MULTIPLIER == 1000000
 
 
 def test_mortgage_model_with_early_payment_init():
