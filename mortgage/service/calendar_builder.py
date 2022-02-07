@@ -68,9 +68,9 @@ class BaseBuilder(Builder):
         self.calendar.month_loan_rate = self.calendar.loan_rate / self.calendar.MONTH_PER_YEAR / 100
         self.calendar.total_loan_amount = self.calendar.price - self.calendar.initial_payment
 
-    def common_rate(self):
+    def common_rate(self) -> None:
         """# ОБЩАЯ_СТАВКА = (1 + ЕЖЕМЕСЯЧНАЯ_СТАВКА) ^ СРОК_ИПОТЕКИ_МЕСЯЦЕВ"""
-        pass
+        self.calendar.common_rate = (1 + self.calendar.month_loan_rate) ** self.calendar.period
 
     def monthly_payment(self):
         """# ЕЖЕМЕСЯЧНЫЙ_ПЛАТЕЖ = СУММА_КРЕДИТА * ЕЖЕМЕСЯЧНАЯ_СТАВКА * ОБЩАЯ_СТАВКА / (ОБЩАЯ_СТАВКА - 1)"""
