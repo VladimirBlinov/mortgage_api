@@ -1,3 +1,5 @@
+from unittest import TestCase
+
 from mortgage.domain.model import BaseMortgage
 from mortgage.service.calendar_builder import BaseBuilder
 
@@ -7,14 +9,20 @@ data_dict = {'price': 20,
              'loan_rate': 7.5}
 
 
-def test_base_builder_init():
-    mortgage_builder = BaseBuilder(data_dict)
+class TestBuilderBuildCalendar(TestCase):
+    def setUp(self) -> None:
+        self.data_dict = {'price': 20,
+                          'initial_payment': 2,
+                          'period': 30,
+                          'loan_rate': 7.5}
+        self.mortgage_builder = BaseBuilder(data_dict)
 
-    assert isinstance(mortgage_builder, BaseBuilder)
-    assert mortgage_builder.calendar.price == data_dict['price']
-    assert mortgage_builder.calendar.to_dict()['period'] == data_dict['period']
-    assert mortgage_builder.calendar.MONTH_PER_YEAR == 12
-    assert mortgage_builder.calendar.MLN_MULTIPLIER == 1000000
+    def test_base_builder_init(self):
+        self.assertIsInstance(self.mortgage_builder, BaseBuilder)
+        self.assertEqual(data_dict['price'], self.mortgage_builder.calendar.price)
+        self.assertEqual(data_dict['period'], self.mortgage_builder.calendar.to_dict()['period'])
+        self.assertEqual(12, self.mortgage_builder.calendar.MONTH_PER_YEAR)
+        self.assertEqual(1000000, self.mortgage_builder.calendar.MLN_MULTIPLIER)
 
 
 def test_base_builder_prepare_data():
@@ -36,3 +44,4 @@ def test_base_builder_common_rate():
 
     assert isinstance(mb.calendar.common_rate, float)
     assert mb.calendar.common_rate == (1 + data_dict['loan_rate'] / 12 / 100) ** (data_dict['period'] * 12)
+
