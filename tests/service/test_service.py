@@ -1,7 +1,6 @@
 from unittest import TestCase
 
-from mortgage.domain.model import BaseMortgage
-from mortgage.service.calendar_builder import BaseBuilder
+from mortgage.service.service import BaseBuilder
 
 data_dict = {'price': 20,
              'initial_payment': 2,
@@ -15,14 +14,14 @@ class TestBuilderBuildCalendar(TestCase):
                           'initial_payment': 2,
                           'period': 30,
                           'loan_rate': 7.5}
-        self.mortgage_builder = BaseBuilder(data_dict)
+        self.mb = BaseBuilder(data_dict)
 
     def test_base_builder_init(self):
-        self.assertIsInstance(self.mortgage_builder, BaseBuilder)
-        self.assertEqual(data_dict['price'], self.mortgage_builder.calendar.price)
-        self.assertEqual(data_dict['period'], self.mortgage_builder.calendar.to_dict()['period'])
-        self.assertEqual(12, self.mortgage_builder.calendar.MONTH_PER_YEAR)
-        self.assertEqual(1000000, self.mortgage_builder.calendar.MLN_MULTIPLIER)
+        self.assertIsInstance(self.mb, BaseBuilder)
+        self.assertEqual(data_dict['price'], self.mb.calendar.price)
+        self.assertEqual(data_dict['period'], self.mb.calendar.to_dict()['period'])
+        self.assertEqual(12, self.mb.calendar.MONTH_PER_YEAR)
+        self.assertEqual(1000000, self.mb.calendar.MLN_MULTIPLIER)
 
 
 def test_base_builder_prepare_data():
