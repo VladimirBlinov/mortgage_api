@@ -1,18 +1,19 @@
 import json
-
 from flask import Flask, Response, request
 import os
 from dotenv import load_dotenv
+
+from mortgage.service import service
 
 load_dotenv()
 app = Flask(__name__)
 
 
 @app.route("/", methods=['GET', 'POST'])
-def get_base_calendar():
+def get_calendar():
     request_data = request.json
-    response_data = request_data
-    return Response(json.dumps(response_data), status=200, mimetype='application/json')
+    calendar = service.get_calendar(request_data)
+    return Response(json.dumps(calendar), status=200, mimetype='application/json')
 
 
 if __name__ == '__main__':
