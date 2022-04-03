@@ -135,4 +135,4 @@ class TestCalculateCalendar(TestCase):
         self.calculator.overpayment()
         self.calculator.calculate_first_month()
 
-        self.assertEqual(int(98166.67), int(self.calculator._calendar_df.iloc[0][0]))
+        self.assertEqual(int(98166.67), int(self.calculator.calendar.iloc[0][0]))

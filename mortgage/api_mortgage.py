@@ -1,4 +1,3 @@
-import json
 from flask import Flask, Response, request
 import os
 from dotenv import load_dotenv
@@ -11,9 +10,10 @@ app = Flask(__name__)
 
 @app.route("/", methods=['GET', 'POST'])
 def get_calendar():
-    request_data = request.json
+    request_data = service.get_input_data(request)
     calendar = service.get_calendar(request_data)
-    return Response(json.dumps(calendar), status=200, mimetype='application/json')
+    calendar_as_json = service.serilalize(calendar)
+    return Response(calendar_as_json, status=200, mimetype='application/json')
 
 
 if __name__ == '__main__':

@@ -64,8 +64,7 @@ class MortgageEP(BaseMortgage):
 class ICalculator(ABC):
     """Abstract class of calculator Builder"""
     def __init__(self):
-        self.calendar = {}
-        self._calendar_df = pd.DataFrame()
+        self.calendar = pd.DataFrame()
 
     @abstractmethod
     def prepare_data(self):
@@ -159,12 +158,13 @@ class Calculator(ICalculator):
     def calculate_first_month(self):
         """Calculate attributes after first month"""
         self.mortgage.residual_loan = self.mortgage.residual_loan - self.mortgage.monthly_main_part
-        _data_dict = {'Percent_part': self.mortgage.monthly_percent_part,
-                      'Main_part': self.mortgage.monthly_main_part,
-                      'Monthly_payment': self.mortgage.monthly_payment,
-                      'Residual_loan_amount': self.mortgage.residual_loan,
+        _data_dict = {'percent_part': self.mortgage.monthly_percent_part,
+                      'main_part': self.mortgage.monthly_main_part,
+                      'monthly_payment': self.mortgage.monthly_payment,
+                      'residual_loan_amount': self.mortgage.residual_loan,
                       }
-        self._calendar_df = pd.DataFrame(data=_data_dict, index=[1])
+        self.calendar = pd.DataFrame(data=_data_dict, index=[1])
+        self.calendar.index.name = 'month'
 
     def get_calendar(self):
         """Calculates payments calendar"""
@@ -191,3 +191,4 @@ class CalculatorBuilder(ICalculatorBuilder):
         self.calculator.overpayment()
         self.calculator.calculate_first_month()
         self.calculator.get_calendar()
+        return self.calculator.calendar
