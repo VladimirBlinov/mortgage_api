@@ -16,3 +16,4 @@ class TestServiceGetCalendar(TestCase):
 
     def test_service_get_calendar_dict_is_not_empty(self):
         self.assertTrue(bool(self.calendar))
+

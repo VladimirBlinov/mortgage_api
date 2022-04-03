@@ -1,9 +1,7 @@
 import json
-
-import pandas as pd
 from flask import Request
 
-from mortgage.domain.model import BaseMortgage, ICalculator, Mortgage, Calculator, CalculatorBuilder
+from mortgage.domain.model import Mortgage, Calculator, CalculatorBuilder
 
 
 def get_calendar(request_data: dict):
@@ -20,7 +18,6 @@ def serilalize(dictionary: dict) -> json:
 
 
 def get_input_data(request: Request) -> dict:
-    input_data = {}
     if len(request.data) > 0:
         input_data = json.loads(request.data)
     elif len(request.args) > 0:

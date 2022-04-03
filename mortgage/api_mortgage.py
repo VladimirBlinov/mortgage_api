@@ -4,13 +4,17 @@ from dotenv import load_dotenv
 
 from mortgage.service import service
 
+
 load_dotenv()
 app = Flask(__name__)
 
 
 @app.route("/", methods=['GET', 'POST'])
 def get_calendar():
-    request_data = service.get_input_data(request)
+    try:
+        request_data = service.get_input_data(request)
+    except service.InvalidInputData as ex:
+        return Response("No input data", status=400, mimetype='text/html')
     calendar = service.get_calendar(request_data)
     calendar_as_json = service.serilalize(calendar)
     return Response(calendar_as_json, status=200, mimetype='application/json')

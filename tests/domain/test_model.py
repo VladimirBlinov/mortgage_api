@@ -33,6 +33,7 @@ def test_mortgage_to_dict():
                  'initial_payment': 2,
                  'period': 30,
                  'loan_rate': 7.5,
+                 'period_month': 0,
                  'month_loan_rate': 0,
                  'total_loan_amount': 0,
                  'common_rate': 0,
@@ -101,8 +102,8 @@ class TestCalculateCalendar(TestCase):
         self.calculator.prepare_data()
         assert self.mortgage.price == self.data_dict['price'] * 1000000
         assert self.mortgage.initial_payment == self.data_dict['initial_payment'] * 1000000
-        assert self.mortgage.period == self.data_dict['period'] * 12
-        assert isinstance(self.calculator.mortgage.period, int)
+        assert self.mortgage.period_month == self.data_dict['period'] * 12
+        assert isinstance(self.calculator.mortgage.period_month, int)
         assert self.mortgage.month_loan_rate == self.data_dict['loan_rate'] / 12 / 100
         assert self.mortgage.total_loan_amount == self.data_dict['price'] * 1000000 - self.data_dict[
             'initial_payment'] * 1000000

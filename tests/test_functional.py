@@ -13,6 +13,20 @@ INPUT_DATA = {'price': 18,
 INPUT_PARAMS = '/?price=18&initial_payment=2.5&period=30&loan_rate=7.6'
 
 
+class TestAPIwithoutParameters(TestCase):
+    def setUp(self) -> None:
+        self.url = get_api_url()
+        self.session = requests.Session()
+
+    def test_api_request_raise_exception(self):
+        self.r = self.session.get(self.url)
+        self.assertGreaterEqual(400, self.r.status_code)
+
+    def test_api_request_return_text(self):
+        self.r = self.session.get(self.url)
+        self.assertIn("No input data", self.r.text)
+
+
 class TestCalendarWithParamsInURL(TestCase):
     def setUp(self) -> None:
         self.url = get_api_url() + INPUT_PARAMS
@@ -21,6 +35,11 @@ class TestCalendarWithParamsInURL(TestCase):
     def test_api_request_return_status_code_200(self):
         self.r = self.session.get(self.url)
         self.assertEqual(200, self.r.status_code)
+
+    def test_api_request_return_data(self):
+        self.r = self.session.post(self.url)
+        self.assertIsInstance(json.loads(self.r.text), (dict,))
+        print(self.r.text)
 
 
 class TestCalendar(TestCase):
