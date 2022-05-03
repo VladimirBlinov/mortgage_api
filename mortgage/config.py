@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+ROUND = 0
+
 
 def get_api_url():
     host = os.getenv("API")

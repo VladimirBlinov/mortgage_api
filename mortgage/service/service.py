@@ -8,8 +8,7 @@ def get_calendar(request_data: dict):
     mortgage = Mortgage.from_dict(request_data)
     calculator = Calculator(mortgage)
     cb = CalculatorBuilder(calculator)
-    builded_calendar = cb.build_calculator()
-    builded_calendar_as_dict = builded_calendar.to_dict('index')
+    builded_calendar_as_dict = cb.build_calculator()
     return builded_calendar_as_dict
 
 
@@ -22,6 +21,8 @@ def get_input_data(request: Request) -> dict:
         input_data = json.loads(request.data)
     elif len(request.args) > 0:
         input_data = request.args.to_dict()
+    elif len(request.form) > 0:
+        input_data = request.form.to_dict()
     else:
         raise InvalidInputData('No input data provided')
     return input_data
