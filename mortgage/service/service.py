@@ -1,7 +1,7 @@
 import json
 from flask import Request
 
-from mortgage.domain.model import Mortgage, Calculator, CalculatorBuilder
+from mortgage.domain.model import Mortgage, Calculator, CalculatorBuilder, Chart
 
 
 def get_calendar(request_data: dict):
@@ -9,6 +9,9 @@ def get_calendar(request_data: dict):
     calculator = Calculator(mortgage)
     cb = CalculatorBuilder(calculator)
     builded_calendar_as_dict = cb.build_calculator()
+    chart = Chart(cb.calculator)
+    # chart.draw_background()
+    builded_calendar_as_dict['chart'] = chart.draw_chart()
     return builded_calendar_as_dict
 
 

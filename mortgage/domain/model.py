@@ -1,9 +1,14 @@
+
 import dataclasses
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
+
 import pandas as pd
-import matplotlib.pyplot as plt
+import base64
+from io import BytesIO
+from matplotlib.figure import Figure
+import mpld3
 
 
 @dataclass
@@ -255,38 +260,70 @@ class Chart:
     def __init__(self, calculator: ICalculator):
         self.calculator = calculator
 
-    def draw_background(self):
-        fig, ax = plt.subplots(figsize=(15, 10))
-        _xticks = [x for x in range(0, self.calculator.mortgage.period_month + 1, self.PLOT_MONTH_TICKS)]
-        _yticks = [y for y in range(0, (int(round(self.calculator.calendar.monthly_payment[1], 0)) +
-                                        2 * self.PLOT_PAYMENTS_TICKS), self.PLOT_PAYMENTS_TICKS)]
-        _ytickslabels = ['{:,.0f}'.format(y).replace(",", " ") for y in _yticks]
-        ax.set_xlim(left=0, right=self.calculator.mortgage.period_month)
-        ax.set_ylim(bottom=0, top=max(_yticks))
-        plt.xticks(ticks=_xticks)
-        plt.yticks(ticks=_yticks, labels=_ytickslabels)
-        ax.tick_params(axis='both', labelsize=6)
-        plt.xlabel(f'Месяц')
-        plt.ylabel(f'RUB')
-        plt.grid()
+    # def draw_background(self):
+    #     fig, ax = plt.subplots(figsize=(15, 10))
+    #     _xticks = [x for x in range(0, self.calculator.mortgage.period_month + 1, self.PLOT_MONTH_TICKS)]
+    #     _yticks = [y for y in range(0, (int(round(self.calculator.calendar.monthly_payment[1], 0)) +
+    #                                     2 * self.PLOT_PAYMENTS_TICKS), self.PLOT_PAYMENTS_TICKS)]
+    #     _ytickslabels = ['{:,.0f}'.format(y).replace(",", " ") for y in _yticks]
+    #     ax.set_xlim(left=0, right=self.calculator.mortgage.period_month)
+    #     ax.set_ylim(bottom=0, top=max(_yticks))
+    #     plt.xticks(ticks=_xticks)
+    #     plt.yticks(ticks=_yticks, labels=_ytickslabels)
+    #     ax.tick_params(axis='both', labelsize=6)
+    #     plt.xlabel(f'Месяц')
+    #     plt.ylabel(f'RUB')
+    #     plt.grid()
 
-    def draw(self):
-        self.draw_background()
-        plt.plot(self.calculator.calendar.percent_part, label='Percent part', color='r')
-        plt.plot(self.calculator.calendar.main_part, label='Main part', color='g')
-        plt.hlines(self.calculator.avg_percent_part, xmin=self.calculator.calendar.index[0],
-                   xmax=self.calculator.calendar.index[-1],
-                   label=f'Average percent payment {round(self.calculator.avg_percent_part, 2)} RUB', color='y')
-        plt.hlines(self.calculator.monthly_payment, xmin=self.calculator.calendar.index[0],
+    def draw_chart(self):
+        # self.draw_background()
+        fig = Figure()
+        ax = fig.subplots()
+        ax.plot([float(x) for x in self.calculator.calendar.percent_part.values], label='Percent part', color='r')
+        ax.plot([float(x) for x in self.calculator.calendar.main_part.values], label='Main part', color='g')
+        ax.hlines(self.calculator.avg_percent_part, xmin=self.calculator.calendar.index[0],
+                              xmax=self.calculator.calendar.index[-1],
+                              label=f'Average percent payment {round(self.calculator.avg_percent_part, 2)} RUB', color='y')
+        ax.hlines(self.calculator.calendar.monthly_payment, xmin=self.calculator.calendar.index[0],
                    xmax=self.calculator.calendar.index[-1],
                    label=f'Monthly payment {int(self.calculator.avg_monthly_payment)} RUB', color='b')
-        plt.title(f'Average monthly payment: {int(self.calculator.calendar.monthly_payment)} RUB;'
-                  f' Period: {self.calculator.mortgage.period} years; '
-                  f'Price: {self.calculator.mortgage.price} RUB; '
-                  f'Initial payment: {int(self.calculator.mortgage.initial_payment)} RUB;\n'
-                  f'Total payment: {int(self.calculator.total_payment)} RUB; '
-                  f'Total loan amount: {int(self.calculator.mortgage.total_loan_amount)} RUB; '
-                  f'Overpayment: {int(self.calculator.mortgage.overpayment)} RUB')
-        plt.legend()
+        ax.set_title(f'Average monthly payment: {int(self.calculator.avg_monthly_payment):,} RUB; '
+                  f'Period: {int(self.calculator.mortgage.period):,} years;\n '
+                  f'Price: {int(self.calculator.mortgage.price):,} RUB; '
+                  f'Initial payment: {int(self.calculator.mortgage.initial_payment):,} RUB;\n'
+                     f'Total loan amount: {int(self.calculator.mortgage.total_loan_amount)} RUB; '
+                  f'Total payment: {int(self.calculator.total_payment):,} RUB;\n'
+                  f'Overpayment: {int(self.calculator.mortgage.overpayment):,} RUB'.replace(',', ' '))
+        ax.legend()
+
+        # Save it to a temporary buffer.
+        buf = BytesIO()
+        fig.savefig(buf, format="png", dpi=150)
+
+        # Embed the result in the html output.
+        data = base64.b64encode(buf.getbuffer()).decode("ascii")
+        return f"data:image/png;base64,{data}"
+        # return f"<img src='data:image/png;base64,{data}'/>"
+
+        # plt.plot(self.calculator.calendar.percent_part, label='Percent part', color='r')
+        # plt.plot(self.calculator.calendar.main_part, label='Main part', color='g')
+        # plt.hlines(self.calculator.avg_percent_part, xmin=self.calculator.calendar.index[0],
+        #            xmax=self.calculator.calendar.index[-1],
+        #            label=f'Average percent payment {round(self.calculator.avg_percent_part, 2)} RUB', color='y')
+        # plt.hlines(self.calculator.calendar.monthly_payment, xmin=self.calculator.calendar.index[0],
+        #            xmax=self.calculator.calendar.index[-1],
+        #            label=f'Monthly payment {int(self.calculator.avg_monthly_payment)} RUB', color='b')
+        # plt.title(f'Average monthly payment: {int(self.calculator.avg_monthly_payment)} RUB;'
+        #           f' Period: {self.calculator.mortgage.period} years; '
+        #           f'Price: {self.calculator.mortgage.price} RUB; '
+        #           f'Initial payment: {int(self.calculator.mortgage.initial_payment)} RUB;\n'
+        #           f'Total payment: {int(self.calculator.total_payment)} RUB; '
+        #           f'Total loan amount: {int(self.calculator.mortgage.total_loan_amount)} RUB; '
+        #           f'Overpayment: {int(self.calculator.mortgage.overpayment)} RUB')
+        # plt.legend()
+        # plt.draw()
+        # html_str = mpld3.fig_to_html(plt)
+        # return html_str
+
 
 
