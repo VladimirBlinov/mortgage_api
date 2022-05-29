@@ -24,7 +24,7 @@ def test_mortgage_model_with_early_payment_init():
     assert mortgage.period == 30
     assert mortgage.loan_rate == 7.5
     assert mortgage.first_month == 24
-    assert mortgage.frequency_months == 1
+    assert mortgage.frequency == 1
     assert mortgage.early_payment_amount == 50000
 
 

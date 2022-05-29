@@ -7,12 +7,46 @@ from typing import ClassVar
 import pandas as pd
 import base64
 from io import BytesIO
+
+from matplotlib import rcParams
 from matplotlib.figure import Figure
-import mpld3
 
 
 @dataclass
-class BaseMortgage:
+class IMortgage(ABC):
+    MONTH_PER_YEAR: ClassVar[int]
+    MLN_MULTIPLIER: ClassVar[int]
+    price: float
+    initial_payment: float
+    period: float
+    loan_rate: float
+    first_month: int
+    frequency: int
+    early_pay_amount: int
+    start_monthly_payment: int
+    period_month: int
+    month_loan_rate: float
+    total_loan_amount: float
+    common_rate: float
+    monthly_payment: float
+    residual_loan: float
+    monthly_percent_part: float
+    monthly_main_part: float
+    overpayment: float
+    avg_percent_part: float
+    avg_monthly_payment: float
+    additional_payments: float
+    total_period: int
+    total_payment: int
+
+
+    @abstractmethod
+    def to_dict(self):
+        pass
+
+
+@dataclass
+class BaseMortgage(IMortgage):
     """Base class with initial data"""
     MONTH_PER_YEAR: ClassVar[int] = 12
     MLN_MULTIPLIER: ClassVar[int] = 1000000
@@ -33,6 +67,8 @@ class BaseMortgage:
     avg_monthly_payment: float = 0
     additional_payments: float = 0
     total_period: int = 0
+    start_monthly_payment: int = 0
+    total_payment: int = 0
 
     def to_dict(self):
         return dataclasses.asdict(self)
@@ -64,8 +100,8 @@ class Mortgage(BaseMortgage):
 class MortgageEP(BaseMortgage):
     """Class Mortgage with early payments"""
     first_month: int = 0
-    frequency_months: int = 0
-    early_payment_amount: int = 0
+    frequency: int = 0
+    early_pay_amount: int = 0
 
 # todo: override from_dict method for EP
 
@@ -80,6 +116,7 @@ class ICalculator(ABC):
         self.avg_percent_part = None
         self.avg_monthly_payment = None
         self.total_payment = None
+        self.overpayment = None
 
     @abstractmethod
     def prepare_data(self):
@@ -112,7 +149,7 @@ class ICalculator(ABC):
         pass
 
     @abstractmethod
-    def overpayment(self):
+    def get_overpayment(self):
         """# ПЕРЕПЛАТА = ЕЖЕМЕСЯЧНЫЙ_ПЛАТЕЖ * СРОК_ИПОТЕКИ_МЕСЯЦЕВ - СУММА_КРЕДИТА"""
         pass
 
@@ -135,11 +172,16 @@ class ICalculator(ABC):
         """Gets averages values"""
         pass
 
+    def get_total_payment(self):
+        """Get total payment"""
+        pass
+
+
 
 class BaseCalculator(ICalculator):
     """Base Mortgage calendar builder"""
 
-    def __init__(self, mortgage: Mortgage) -> None:
+    def __init__(self, mortgage: IMortgage) -> None:
         """Create new instance of Mortgage calendar"""
         super().__init__()
         self.mortgage = mortgage
@@ -148,6 +190,7 @@ class BaseCalculator(ICalculator):
         self.avg_percent_part: float = 0
         self.avg_monthly_payment: float = 0
         self.total_payment: float = 0
+        self.overpayment: float = 0
 
     def prepare_data(self) -> None:
         """Make transformation of input parameters"""
@@ -178,17 +221,21 @@ class BaseCalculator(ICalculator):
         """# ОСНОВНАЯ_ЧАСТЬ = ЕЖЕМЕСЯЧНЫЙ_ПЛАТЕЖ - ПРОЦЕНТНАЯ_ЧАСТЬ"""
         self.mortgage.monthly_main_part = int(self.mortgage.monthly_payment - self.mortgage.monthly_percent_part)
 
-    def overpayment(self):
-        """# ПЕРЕПЛАТА = ЕЖЕМЕСЯЧНЫЙ_ПЛАТЕЖ * СРОК_ИПОТЕКИ_МЕСЯЦЕВ - СУММА_КРЕДИТА"""
-        self.mortgage.overpayment = int(self.mortgage.monthly_payment * self.mortgage.period_month -
+    def get_total_payment(self):
+        self.total_payment = self.calendar.monthly_payment.sum()
+
+    def get_overpayment(self):
+        """# ПЕРЕПЛАТА = ОБЩАЯ СУММА - СУММА_КРЕДИТА"""
+        self.overpayment = int(self.total_payment -
                                         self.mortgage.total_loan_amount)
 
     def calculate_first_month(self):
         """Calculate attributes after first month"""
         self.mortgage.residual_loan = int(self.mortgage.residual_loan - self.mortgage.monthly_main_part)
-        _data_dict = {'percent_part': self.mortgage.monthly_percent_part,
+        _data_dict = {'monthly_payment': self.mortgage.monthly_payment,
+                      'percent_part': self.mortgage.monthly_percent_part,
+                      'percent_cum': self.mortgage.monthly_percent_part,
                       'main_part': self.mortgage.monthly_main_part,
-                      'monthly_payment': self.mortgage.monthly_payment,
                       'residual_loan_amount': self.mortgage.residual_loan,
                       }
         self.calendar = pd.DataFrame(data=_data_dict, index=[1])
@@ -202,9 +249,10 @@ class BaseCalculator(ICalculator):
             self.mortgage.residual_loan = int(self.mortgage.residual_loan - self.mortgage.monthly_main_part)
             if self.mortgage.residual_loan < 0:
                 self.mortgage.residual_loan = 0
-            _data_dict = {'percent_part': self.mortgage.monthly_percent_part,
+            _data_dict = {'monthly_payment': self.mortgage.monthly_payment,
+                          'percent_part': self.mortgage.monthly_percent_part,
+                          'percent_cum': self.calendar['percent_part'].sum() + self.mortgage.monthly_percent_part,
                           'main_part': self.mortgage.monthly_main_part,
-                          'monthly_payment': self.mortgage.monthly_payment,
                           'residual_loan_amount': self.mortgage.residual_loan
                           }
             self.calendar = pd.concat([self.calendar, pd.DataFrame(data=_data_dict, index=[month])], ignore_index=False)
@@ -212,13 +260,12 @@ class BaseCalculator(ICalculator):
     def get_averages(self):
         self.avg_percent_part = int(self.calendar.percent_part[self.calendar.percent_part != 0].mean())
         self.avg_monthly_payment = int(self.calendar.monthly_payment[self.calendar.monthly_payment != 0].mean())
-        self.total_payment = self.calendar.monthly_payment.sum()
 
     def format_calendar(self):
         self.calendar_as_dict = self.calendar.to_dict('index')
         for key, value in self.calendar_as_dict.items():
             for k, v in value.items():
-                self.calendar_as_dict[key][k] = '{:,}'.format(v).replace(',', ' ')
+                self.calendar_as_dict[key][k] = '{:,}'.format(int(v)).replace(',', ' ')
         return self.calendar_as_dict
 
 
@@ -226,6 +273,52 @@ class Calculator(BaseCalculator):
     def __init__(self, mortgage: Mortgage) -> None:
         """Create new instance of Mortgage calendar"""
         super().__init__(mortgage)
+
+
+class CalculatorEP(BaseCalculator):
+    def __init__(self, mortgage_ep: IMortgage) -> None:
+        """Create new instance of Mortgage calendar"""
+        super().__init__(mortgage_ep)
+
+    def get_calendar(self):
+        """Calculates payments calendar"""
+        self.mortgage.start_monthly_payment = self.mortgage.monthly_payment
+        for month in range(2, self.mortgage.period_month + 1):
+            if self.mortgage.residual_loan > 0:
+                self.mortgage.monthly_percent_part = int(self.mortgage.residual_loan * self.mortgage.month_loan_rate)
+                if self.mortgage.residual_loan <= 0:
+                    self.mortgage.residual_loan = 0
+                    self.mortgage.monthly_payment = 0
+
+                self.mortgage.monthly_main_part = int(self.mortgage.monthly_payment - self.mortgage.monthly_percent_part)
+                self.mortgage.residual_loan = int(self.mortgage.residual_loan - self.mortgage.monthly_main_part)
+
+                if month >= self.mortgage.first_month and month % self.mortgage.frequency == 0:
+                    if self.mortgage.residual_loan - (self.mortgage.early_pay_amount +
+                                                      (self.mortgage.start_monthly_payment -
+                                                       self.mortgage.monthly_payment)) > 0:
+                        self.mortgage.additional_payments += \
+                            (self.mortgage.early_pay_amount + (self.mortgage.start_monthly_payment -
+                                                               self.mortgage.monthly_payment))
+                        self.mortgage.residual_loan = self.mortgage.residual_loan - (self.mortgage.early_pay_amount +
+                                                                                     (self.mortgage.start_monthly_payment -
+                                                                                      self.mortgage.monthly_payment))
+                        if self.mortgage.period_month > month:
+                            self.mortgage.common_rate = (1 + self.mortgage.month_loan_rate) ** \
+                                                        (self.mortgage.period_month - month)
+                            self.mortgage.monthly_payment = self.mortgage.residual_loan * self.mortgage.month_loan_rate * \
+                                self.mortgage.common_rate / (self.mortgage.common_rate - 1)
+                    else:
+                        self.mortgage.additional_payments += self.mortgage.residual_loan
+                        self.mortgage.residual_loan = self.mortgage.residual_loan - self.mortgage.residual_loan
+
+                _data_dict = {'monthly_payment': self.mortgage.monthly_payment,
+                              'percent_part': self.mortgage.monthly_percent_part,
+                              'percent_cum': self.calendar['percent_part'].sum() + self.mortgage.monthly_percent_part,
+                              'main_part': self.mortgage.monthly_main_part,
+                              'residual_loan_amount': self.mortgage.residual_loan
+                              }
+                self.calendar = pd.concat([self.calendar, pd.DataFrame(data=_data_dict, index=[month])], ignore_index=False)
 
 
 class ICalculatorBuilder(ABC):
@@ -245,9 +338,10 @@ class CalculatorBuilder(ICalculatorBuilder):
         self.calculator.residual_loan()
         self.calculator.monthly_percent_part()
         self.calculator.monthly_main_part()
-        self.calculator.overpayment()
         self.calculator.calculate_first_month()
         self.calculator.get_calendar()
+        self.calculator.get_total_payment()
+        self.calculator.get_overpayment()
         self.calculator.get_averages()
         self.calculator.format_calendar()
         return self.calculator.calendar_as_dict
@@ -259,71 +353,48 @@ class Chart:
 
     def __init__(self, calculator: ICalculator):
         self.calculator = calculator
-
-    # def draw_background(self):
-    #     fig, ax = plt.subplots(figsize=(15, 10))
-    #     _xticks = [x for x in range(0, self.calculator.mortgage.period_month + 1, self.PLOT_MONTH_TICKS)]
-    #     _yticks = [y for y in range(0, (int(round(self.calculator.calendar.monthly_payment[1], 0)) +
-    #                                     2 * self.PLOT_PAYMENTS_TICKS), self.PLOT_PAYMENTS_TICKS)]
-    #     _ytickslabels = ['{:,.0f}'.format(y).replace(",", " ") for y in _yticks]
-    #     ax.set_xlim(left=0, right=self.calculator.mortgage.period_month)
-    #     ax.set_ylim(bottom=0, top=max(_yticks))
-    #     plt.xticks(ticks=_xticks)
-    #     plt.yticks(ticks=_yticks, labels=_ytickslabels)
-    #     ax.tick_params(axis='both', labelsize=6)
-    #     plt.xlabel(f'Месяц')
-    #     plt.ylabel(f'RUB')
-    #     plt.grid()
+        self.fig = Figure()
+        self.ax = self.fig.subplots()
+        _xticks = [x for x in range(0, self.calculator.calendar.shape[0], self.PLOT_MONTH_TICKS)]
+        _yticks = [y for y in range(0, (int(round(self.calculator.calendar.monthly_payment[1], 0)) +
+                                        2 * self.PLOT_PAYMENTS_TICKS), self.PLOT_PAYMENTS_TICKS)]
+        _ytickslabels = ['{:,.0f}'.format(y).replace(",", " ") for y in _yticks]
+        self.ax.set_xlim(left=0, right=self.calculator.calendar.shape[0])
+        self.ax.set_ylim(bottom=0, top=max(_yticks))
+        self.ax.set_xticks(ticks=_xticks)
+        self.ax.set_yticks(ticks=_yticks, labels=_ytickslabels)
+        self.ax.tick_params(axis='both', labelsize=3)
+        self.ax.set_xlabel(xlabel=f'Month', fontdict={'fontsize': 'x-small'})
+        self.ax.set_ylabel(ylabel=f'RUB', fontdict={'fontsize': 'x-small'})
+        self.ax.grid()
 
     def draw_chart(self):
-        # self.draw_background()
-        fig = Figure()
-        ax = fig.subplots()
-        ax.plot([float(x) for x in self.calculator.calendar.percent_part.values], label='Percent part', color='r')
-        ax.plot([float(x) for x in self.calculator.calendar.main_part.values], label='Main part', color='g')
-        ax.hlines(self.calculator.avg_percent_part, xmin=self.calculator.calendar.index[0],
-                              xmax=self.calculator.calendar.index[-1],
-                              label=f'Average percent payment {round(self.calculator.avg_percent_part, 2)} RUB', color='y')
-        ax.hlines(self.calculator.calendar.monthly_payment, xmin=self.calculator.calendar.index[0],
-                   xmax=self.calculator.calendar.index[-1],
-                   label=f'Monthly payment {int(self.calculator.avg_monthly_payment)} RUB', color='b')
-        ax.set_title(f'Average monthly payment: {int(self.calculator.avg_monthly_payment):,} RUB; '
-                  f'Period: {int(self.calculator.mortgage.period):,} years;\n '
-                  f'Price: {int(self.calculator.mortgage.price):,} RUB; '
-                  f'Initial payment: {int(self.calculator.mortgage.initial_payment):,} RUB;\n'
-                     f'Total loan amount: {int(self.calculator.mortgage.total_loan_amount)} RUB; '
-                  f'Total payment: {int(self.calculator.total_payment):,} RUB;\n'
-                  f'Overpayment: {int(self.calculator.mortgage.overpayment):,} RUB'.replace(',', ' '))
-        ax.legend()
+        rcParams['axes.titlesize'] = 'x-small'
+        self.ax.plot([float(x) for x in self.calculator.calendar.percent_part.values], label='Percent part', color='r')
+        self.ax.plot([float(x) for x in self.calculator.calendar.main_part.values], label='Main part', color='g')
+        self.ax.hlines(self.calculator.avg_percent_part, xmin=self.calculator.calendar.index[0],
+                       xmax=self.calculator.calendar.index[-1],
+                       label=f'Average percent payment {round(self.calculator.avg_percent_part, 2):,}'
+                             f' RUB'.replace(',', ' '),
+                       color='y')
+        self.ax.hlines(self.calculator.avg_monthly_payment, xmin=self.calculator.calendar.index[0],
+                       xmax=self.calculator.calendar.index[-1],
+                       label=f'Average monthly payment {int(self.calculator.avg_monthly_payment):,} RUB'.replace(',', ' '),
+                       color='b')
+        self.ax.set_title(label=(f'Period: {int(self.calculator.mortgage.period):,} years; '
+                                 f'Price: {int(self.calculator.mortgage.price):,} RUB; '
+                                 f'Loan rate: {self.calculator.mortgage.loan_rate}%;\n'
+                                 f'Initial payment: {int(self.calculator.mortgage.initial_payment):,} RUB; '
+                                 f'Total loan amount: {int(self.calculator.mortgage.total_loan_amount):,} RUB; '
+                                 f'Total payment: {int(self.calculator.total_payment):,} RUB;\n'
+                                 f'Average monthly payment: {int(self.calculator.avg_monthly_payment):,} RUB; '
+                                 f'Overpayment: {int(self.calculator.overpayment):,} RUB'.replace(',', ' ')),
+                          fontdict={'fontsize': rcParams['axes.titlesize']})
 
+        self.ax.legend(fontsize='x-small')
         # Save it to a temporary buffer.
         buf = BytesIO()
-        fig.savefig(buf, format="png", dpi=150)
-
+        self.fig.savefig(buf, format="png", dpi=300)
         # Embed the result in the html output.
         data = base64.b64encode(buf.getbuffer()).decode("ascii")
         return f"data:image/png;base64,{data}"
-        # return f"<img src='data:image/png;base64,{data}'/>"
-
-        # plt.plot(self.calculator.calendar.percent_part, label='Percent part', color='r')
-        # plt.plot(self.calculator.calendar.main_part, label='Main part', color='g')
-        # plt.hlines(self.calculator.avg_percent_part, xmin=self.calculator.calendar.index[0],
-        #            xmax=self.calculator.calendar.index[-1],
-        #            label=f'Average percent payment {round(self.calculator.avg_percent_part, 2)} RUB', color='y')
-        # plt.hlines(self.calculator.calendar.monthly_payment, xmin=self.calculator.calendar.index[0],
-        #            xmax=self.calculator.calendar.index[-1],
-        #            label=f'Monthly payment {int(self.calculator.avg_monthly_payment)} RUB', color='b')
-        # plt.title(f'Average monthly payment: {int(self.calculator.avg_monthly_payment)} RUB;'
-        #           f' Period: {self.calculator.mortgage.period} years; '
-        #           f'Price: {self.calculator.mortgage.price} RUB; '
-        #           f'Initial payment: {int(self.calculator.mortgage.initial_payment)} RUB;\n'
-        #           f'Total payment: {int(self.calculator.total_payment)} RUB; '
-        #           f'Total loan amount: {int(self.calculator.mortgage.total_loan_amount)} RUB; '
-        #           f'Overpayment: {int(self.calculator.mortgage.overpayment)} RUB')
-        # plt.legend()
-        # plt.draw()
-        # html_str = mpld3.fig_to_html(plt)
-        # return html_str
-
-
-

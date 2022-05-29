@@ -1,12 +1,16 @@
 import json
 from flask import Request
 
-from mortgage.domain.model import Mortgage, Calculator, CalculatorBuilder, Chart
+from mortgage.domain.model import Mortgage, Calculator, CalculatorBuilder, Chart, MortgageEP, CalculatorEP
 
 
 def get_calendar(request_data: dict):
-    mortgage = Mortgage.from_dict(request_data)
-    calculator = Calculator(mortgage)
+    if request_data['early_payment'] == 'on':
+        mortgage = MortgageEP.from_dict(request_data)
+        calculator = CalculatorEP(mortgage)
+    else:
+        mortgage = Mortgage.from_dict(request_data)
+        calculator = Calculator(mortgage)
     cb = CalculatorBuilder(calculator)
     builded_calendar_as_dict = cb.build_calculator()
     chart = Chart(cb.calculator)
