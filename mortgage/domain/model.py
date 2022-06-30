@@ -370,6 +370,7 @@ class Chart:
 
     def draw_chart(self):
         rcParams['axes.titlesize'] = 'x-small'
+        rcParams['lines.linewidth'] = 1
         self.ax.plot([float(x) for x in self.calculator.calendar.percent_part.values], label='Percent part', color='r')
         self.ax.plot([float(x) for x in self.calculator.calendar.main_part.values], label='Main part', color='g')
         self.ax.hlines(self.calculator.avg_percent_part, xmin=self.calculator.calendar.index[0],
@@ -394,7 +395,7 @@ class Chart:
         self.ax.legend(fontsize='x-small')
         # Save it to a temporary buffer.
         buf = BytesIO()
-        self.fig.savefig(buf, format="png", dpi=300)
+        self.fig.savefig(buf, format="png", dpi=500)
         # Embed the result in the html output.
         data = base64.b64encode(buf.getbuffer()).decode("ascii")
         return f"data:image/png;base64,{data}"
