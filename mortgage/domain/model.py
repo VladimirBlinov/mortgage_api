@@ -69,6 +69,9 @@ class BaseMortgage(IMortgage):
     total_period: int = 0
     start_monthly_payment: int = 0
     total_payment: int = 0
+    first_month: int = 0
+    frequency: int = 0
+    early_pay_amount: int = 0
 
     def to_dict(self):
         return dataclasses.asdict(self)
@@ -177,7 +180,6 @@ class ICalculator(ABC):
         pass
 
 
-
 class BaseCalculator(ICalculator):
     """Base Mortgage calendar builder"""
 
@@ -282,6 +284,7 @@ class CalculatorEP(BaseCalculator):
 
     def get_calendar(self):
         """Calculates payments calendar"""
+        # TODO: check residual loan calculation
         self.mortgage.start_monthly_payment = self.mortgage.monthly_payment
         for month in range(2, self.mortgage.period_month + 1):
             if self.mortgage.residual_loan > 0:

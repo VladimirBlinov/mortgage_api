@@ -13,6 +13,7 @@ app = Flask(__name__)
 def get_calendar():
     try:
         request_data = service.get_input_data(request)
+        request_data = service.clean_input_data(request_data)
     except service.InvalidInputData as ex:
         return Response("No input data", status=400, mimetype='text/html')
     calendar = service.get_calendar(request_data)

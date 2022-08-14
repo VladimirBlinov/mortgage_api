@@ -5,7 +5,7 @@ from mortgage.domain.model import Mortgage, Calculator, CalculatorBuilder, Chart
 
 
 def get_calendar(request_data: dict):
-    if request_data['early_payment'] == 'on':
+    if 'early_payment' in request_data:
         mortgage = MortgageEP.from_dict(request_data)
         calculator = CalculatorEP(mortgage)
     else:
@@ -37,3 +37,12 @@ def get_input_data(request: Request) -> dict:
 
 class InvalidInputData(Exception):
     pass
+
+
+def clean_input_data(request_data):
+    request_data_cleaned = {}
+    for k, v in request_data.items():
+        if k != 'csrfmiddlewaretoken':
+            if v != '':
+                request_data_cleaned[k] = v
+    return request_data_cleaned
