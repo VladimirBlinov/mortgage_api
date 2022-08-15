@@ -23,6 +23,7 @@ services:
       - ./mortgage:/usr/src/app/mortgage
     networks:
       - mortgage_network
+
     # Открываем порт в контейнер
     # Порт, который будет смотреть наружу : порт который используется внутри контейнера
     ports:
@@ -32,3 +33,4 @@ services:
 networks:
   mortgage_network:
     name: mortgage_network
+

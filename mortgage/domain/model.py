@@ -208,36 +208,35 @@ class BaseCalculator(ICalculator):
 
     def monthly_payment(self):
         """# ЕЖЕМЕСЯЧНЫЙ_ПЛАТЕЖ = СУММА_КРЕДИТА * ЕЖЕМЕСЯЧНАЯ_СТАВКА * ОБЩАЯ_СТАВКА / (ОБЩАЯ_СТАВКА - 1)"""
-        self.mortgage.monthly_payment = int(self.mortgage.total_loan_amount * self.mortgage.month_loan_rate *\
-            self.mortgage.common_rate / (self.mortgage.common_rate - 1))
+        self.mortgage.monthly_payment = self.mortgage.total_loan_amount * self.mortgage.month_loan_rate *\
+            self.mortgage.common_rate / (self.mortgage.common_rate - 1)
 
     def residual_loan(self):
         """# ОСТАТОК ДОЛГА"""
-        self.mortgage.residual_loan = int(self.mortgage.total_loan_amount)
+        self.mortgage.residual_loan = self.mortgage.total_loan_amount
 
     def monthly_percent_part(self):
         """# ПРОЦЕНТНАЯ_ЧАСТЬ = ОСТАТОК_ДОЛГА * ЕЖЕМЕСЯЧНАЯ_СТАВКА"""
-        self.mortgage.monthly_percent_part = int(self.mortgage.residual_loan * self.mortgage.month_loan_rate)
+        self.mortgage.monthly_percent_part = self.mortgage.residual_loan * self.mortgage.month_loan_rate
 
     def monthly_main_part(self):
         """# ОСНОВНАЯ_ЧАСТЬ = ЕЖЕМЕСЯЧНЫЙ_ПЛАТЕЖ - ПРОЦЕНТНАЯ_ЧАСТЬ"""
-        self.mortgage.monthly_main_part = int(self.mortgage.monthly_payment - self.mortgage.monthly_percent_part)
+        self.mortgage.monthly_main_part = self.mortgage.monthly_payment - self.mortgage.monthly_percent_part
 
     def get_total_payment(self):
-        self.total_payment = self.calendar.monthly_payment.sum()
+        self.total_payment = self.calendar.monthly_payment.sum() # + additional payments
 
     def get_overpayment(self):
         """# ПЕРЕПЛАТА = ОБЩАЯ СУММА - СУММА_КРЕДИТА"""
-        self.overpayment = int(self.total_payment -
-                                        self.mortgage.total_loan_amount)
+        self.overpayment = self.total_payment - self.mortgage.total_loan_amount
 
     def calculate_first_month(self):
         """Calculate attributes after first month"""
-        self.mortgage.residual_loan = int(self.mortgage.residual_loan - self.mortgage.monthly_main_part)
+        self.mortgage.residual_loan = self.mortgage.residual_loan - self.mortgage.monthly_main_part
         _data_dict = {'monthly_payment': self.mortgage.monthly_payment,
+                      'main_part': self.mortgage.monthly_main_part,
                       'percent_part': self.mortgage.monthly_percent_part,
                       'percent_cum': self.mortgage.monthly_percent_part,
-                      'main_part': self.mortgage.monthly_main_part,
                       'residual_loan_amount': self.mortgage.residual_loan,
                       }
         self.calendar = pd.DataFrame(data=_data_dict, index=[1])
@@ -246,15 +245,15 @@ class BaseCalculator(ICalculator):
     def get_calendar(self):
         """Calculates payments calendar"""
         for month in range(2, self.mortgage.period_month + 1):
-            self.mortgage.monthly_percent_part = int(self.mortgage.residual_loan * self.mortgage.month_loan_rate)
-            self.mortgage.monthly_main_part = int(self.mortgage.monthly_payment - self.mortgage.monthly_percent_part)
-            self.mortgage.residual_loan = int(self.mortgage.residual_loan - self.mortgage.monthly_main_part)
+            self.mortgage.monthly_percent_part = self.mortgage.residual_loan * self.mortgage.month_loan_rate
+            self.mortgage.monthly_main_part = self.mortgage.monthly_payment - self.mortgage.monthly_percent_part
+            self.mortgage.residual_loan = self.mortgage.residual_loan - self.mortgage.monthly_main_part
             if self.mortgage.residual_loan < 0:
                 self.mortgage.residual_loan = 0
             _data_dict = {'monthly_payment': self.mortgage.monthly_payment,
+                          'main_part': self.mortgage.monthly_main_part,
                           'percent_part': self.mortgage.monthly_percent_part,
                           'percent_cum': self.calendar['percent_part'].sum() + self.mortgage.monthly_percent_part,
-                          'main_part': self.mortgage.monthly_main_part,
                           'residual_loan_amount': self.mortgage.residual_loan
                           }
             self.calendar = pd.concat([self.calendar, pd.DataFrame(data=_data_dict, index=[month])], ignore_index=False)
@@ -288,13 +287,15 @@ class CalculatorEP(BaseCalculator):
         self.mortgage.start_monthly_payment = self.mortgage.monthly_payment
         for month in range(2, self.mortgage.period_month + 1):
             if self.mortgage.residual_loan > 0:
-                self.mortgage.monthly_percent_part = int(self.mortgage.residual_loan * self.mortgage.month_loan_rate)
+                self.mortgage.monthly_percent_part = self.mortgage.residual_loan * self.mortgage.month_loan_rate
                 if self.mortgage.residual_loan <= 0:
                     self.mortgage.residual_loan = 0
                     self.mortgage.monthly_payment = 0
 
-                self.mortgage.monthly_main_part = int(self.mortgage.monthly_payment - self.mortgage.monthly_percent_part)
-                self.mortgage.residual_loan = int(self.mortgage.residual_loan - self.mortgage.monthly_main_part)
+                self.mortgage.monthly_payment = self.mortgage.residual_loan * self.mortgage.month_loan_rate * \
+                                                self.mortgage.common_rate / (self.mortgage.common_rate - 1)
+                self.mortgage.monthly_main_part = self.mortgage.monthly_payment - self.mortgage.monthly_percent_part
+                self.mortgage.residual_loan = self.mortgage.residual_loan - self.mortgage.monthly_main_part
 
                 if month >= self.mortgage.first_month and month % self.mortgage.frequency == 0:
                     if self.mortgage.residual_loan - (self.mortgage.early_pay_amount +
@@ -309,8 +310,6 @@ class CalculatorEP(BaseCalculator):
                         if self.mortgage.period_month > month:
                             self.mortgage.common_rate = (1 + self.mortgage.month_loan_rate) ** \
                                                         (self.mortgage.period_month - month)
-                            self.mortgage.monthly_payment = self.mortgage.residual_loan * self.mortgage.month_loan_rate * \
-                                self.mortgage.common_rate / (self.mortgage.common_rate - 1)
                     else:
                         self.mortgage.additional_payments += self.mortgage.residual_loan
                         self.mortgage.residual_loan = self.mortgage.residual_loan - self.mortgage.residual_loan
@@ -322,6 +321,9 @@ class CalculatorEP(BaseCalculator):
                               'residual_loan_amount': self.mortgage.residual_loan
                               }
                 self.calendar = pd.concat([self.calendar, pd.DataFrame(data=_data_dict, index=[month])], ignore_index=False)
+
+    def get_total_payment(self):
+        self.total_payment = self.calendar.monthly_payment.sum() + self.mortgage.additional_payments
 
 
 class ICalculatorBuilder(ABC):
