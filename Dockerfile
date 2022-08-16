@@ -10,11 +10,8 @@ RUN apt-get update \
     && pip install psycopg2
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
-# RUN chmod +x ./entrypoint.sh
 
 COPY . .
 
 ENV PYTHONPATH /usr/src/app
 EXPOSE 5005
-
-# ENTRYPOINT ["/usr/src/app/entrypoint.sh"]

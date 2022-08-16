@@ -1,31 +1,19 @@
 version: '3'
 services:
   mortgage:
-    # Путь до Dockerfile
     build:
       context: ./
       dockerfile: Dockerfile
-    # Имя для создаваемого контейнера
     container_name: mortgage-backend-flask
-    # Создание переменных окружения в контейнере
     environment:
-      # для отладки (при запуске в релиз убрать!)
       - FLASK_ENV=development
       - PYTHONPATH=/usr/src/app
-      ## Позволяет отслеживать процесс работы приложения в командной строке
       - PYTHONUNBUFFERED=True
-      ##
-    # Перезапускаем сервис в случае падения
     restart: on-failure
-    # Прокладывам путь для файлов. Все файлы, которые хранятся у вас в
-    # директории ./backend, появятся в директории контейнера /backend
     volumes:
       - ./mortgage:/usr/src/app/mortgage
     networks:
       - mortgage_network
-
-    # Открываем порт в контейнер
-    # Порт, который будет смотреть наружу : порт который используется внутри контейнера
     ports:
       - "5005:5005"
     command: python ./mortgage/api_mortgage.py
