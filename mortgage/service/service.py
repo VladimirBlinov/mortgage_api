@@ -14,7 +14,6 @@ def get_calendar(request_data: dict):
     cb = CalculatorBuilder(calculator)
     builded_calendar_as_dict = cb.build_calculator()
     chart = Chart(cb.calculator)
-    # chart.draw_background()
     builded_calendar_as_dict['chart'] = chart.draw_chart()
     return builded_calendar_as_dict
 
