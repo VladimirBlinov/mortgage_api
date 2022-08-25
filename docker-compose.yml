@@ -6,7 +6,6 @@ services:
       dockerfile: Dockerfile
     container_name: mortgage-backend-flask
     environment:
-      - FLASK_ENV=development
       - PYTHONPATH=/usr/src/app
       - PYTHONUNBUFFERED=True
     restart: on-failure
