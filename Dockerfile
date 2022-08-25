@@ -4,7 +4,6 @@ WORKDIR /usr/src/app
 
 COPY requirements.txt .
 
-COPY entrypoint.sh .
 RUN apt-get update \
     && apt-get -y install libpq-dev gcc \
     && pip install psycopg2
